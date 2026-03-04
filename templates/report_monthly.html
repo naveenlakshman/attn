@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Monthly Report</h3>
+
+<form method="get">
+  <label>Month</label>
+  <input type="month" name="month" value="{{ month }}">
+  <button type="submit">View</button>
+</form>
+
+<table>
+  <tr>
+    <th>Reg No</th>
+    <th>Name</th>
+    <th>Present Days</th>
+    <th>Absent Days</th>
+    <th>Marked Days</th>
+  </tr>
+
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.registration_number }}</td>
+    <td>{{ r.full_name }}</td>
+    <td>{{ r.present_days or 0 }}</td>
+    <td>{{ r.absent_days or 0 }}</td>
+    <td>{{ r.marked_days or 0 }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

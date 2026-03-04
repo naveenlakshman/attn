@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Attendance Audit Log</h2>
+
+<form method="get" style="margin: 10px 0;">
+  <label>Date</label>
+  <input type="date" name="date" value="{{ att_date }}">
+
+  <label style="margin-left:10px;">Batch (optional)</label>
+  <select name="batch_id">
+    <option value="">All Students</option>
+    {% for b in batches %}
+      <option value="{{ b.id }}" {% if batch_id == b.id|string %}selected{% endif %}>
+        {{ b.course_name }} - {{ b.batch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <button type="submit">View</button>
+</form>
+
+<div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff;">
+  <table style="width:100%; border-collapse:collapse;">
+    <tr>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Date</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Course</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Batch</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Marked</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Present</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Absent</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Marked By</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Last Updated</th>
+      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Open</th>
+    </tr>
+
+    {% for r in rows %}
+    <tr>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.att_date }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.course_name }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.batch_name }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.marked }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.present }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.absent }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.marked_by_name }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.last_marked_at }}</td>
+      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">
+        {% if r.batch_id %}
+          <a href="{{ url_for('report_daily', date=r.att_date, batch_id=r.batch_id) }}">Daily</a>
+        {% else %}
+          <a href="{{ url_for('report_daily', date=r.att_date) }}">Daily</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% if not rows or rows|length == 0 %}
+    <p style="margin-top:10px;">No audit data found for this selection.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

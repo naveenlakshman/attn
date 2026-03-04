@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Assign Batches - {{ student.full_name }} ({{ student.registration_number }})</h3>
+
+<form method="post">
+  <label>Select Batches (Multiple allowed)</label>
+  <select name="batch_ids" multiple size="8" style="width:350px;">
+    {% for b in batches %}
+      <option value="{{ b.id }}" {% if b.id in assigned_ids %}selected{% endif %}>
+        {{ b.course_name }} - {{ b.batch_name }} ({{ b.timing or "" }})
+      </option>
+    {% endfor %}
+  </select>
+
+  <div style="margin-top:10px;">
+    <button type="submit">Save Batches</button>
+    <a href="{{ url_for('students') }}">Back</a>
+  </div>
+</form>
+
+<p style="margin-top:10px;">
+  Tip: Hold <b>Ctrl</b> (Windows) or <b>Cmd</b> (Mac) to select multiple batches.
+</p>
+
+{% endblock %}

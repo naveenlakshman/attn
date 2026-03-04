@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Batches</h3>
+
+<form method="post" action="{{ url_for('batch_add') }}">
+  <label>Batch Name</label>
+  <input name="batch_name" placeholder="Ex: Tally Titans" required>
+
+  <label>Course</label>
+  <select name="course_id" required>
+    <option value="">Select Course</option>
+    {% for c in courses %}
+      <option value="{{ c.id }}">{{ c.course_name }}</option>
+    {% endfor %}
+  </select>
+
+  <label>Timing</label>
+  <input name="timing" placeholder="Ex: 2PM - 4PM">
+
+  <label>Start Date</label>
+  <input type="date" name="start_date">
+
+  <label>End Date</label>
+  <input type="date" name="end_date">
+
+  <button type="submit">Add Batch</button>
+</form>
+
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Batch Name</th>
+    <th>Course</th>
+    <th>Timing</th>
+    <th>Start</th>
+    <th>End</th>
+    <th>Actions</th>
+  </tr>
+
+  {% for b in batches %}
+  <tr>
+    <td>{{ b.id }}</td>
+    <td>{{ b.batch_name }}</td>
+    <td>{{ b.course_name }}</td>
+    <td>{{ b.timing or "" }}</td>
+    <td>{{ b.start_date or "" }}</td>
+    <td>{{ b.end_date or "" }}</td>
+    <td>
+      <a href="{{ url_for('batch_edit', batch_id=b.id) }}">Edit</a>
+      |
+      <form action="{{ url_for('batch_delete', batch_id=b.id) }}" method="post" style="display:inline;">
+        <button type="submit" onclick="return confirm('Delete this batch?')">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

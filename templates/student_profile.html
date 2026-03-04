@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Student Profile</h2>
+
+<div style="margin:10px 0;">
+  <a href="{{ url_for('students') }}">← Back to Students</a>
+</div>
+
+<!-- Student details card -->
+<div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff; margin-bottom:16px;">
+  <h3 style="margin-top:0;">{{ student.full_name }}</h3>
+
+  <p>
+    <b>Reg No:</b> {{ student.registration_number }} |
+    <b>Mobile:</b> {{ student.mobile_number }} |
+    <b>Course:</b> {{ student.course_name or "-" }} |
+    <b>DOJ:</b> {{ student.date_of_joining }}
+  </p>
+
+  <p>
+    <b>Qualification:</b> {{ student.qualification or "-" }} <br>
+    <b>Address:</b> {{ student.address or "-" }}
+  </p>
+
+  <p>
+    <b>Status:</b>
+    {% if student.is_active == 1 %}
+      Active
+    {% else %}
+      Inactive
+    {% endif %}
+  </p>
+</div>
+
+<!-- Attendance summary -->
+<div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+  <div style="flex:1; min-width:260px; padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff;">
+    <h3 style="margin-top:0;">Overall Attendance</h3>
+    <p>
+      <b>Marked Days:</b> {{ overall_marked }} <br>
+      <b>Present:</b> {{ overall_present }} <br>
+      <b>Absent:</b> {{ overall_absent }} <br>
+      <b>Percent:</b> {{ overall_percent }}%
+    </p>
+    <div style="width:100%; background:#eee; border-radius:8px; height:18px; overflow:hidden;">
+      <div style="width:{{ overall_percent }}%; background:#4CAF50; height:18px;"></div>
+    </div>
+  </div>
+
+  <div style="flex:1; min-width:260px; padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff;">
+    <h3 style="margin-top:0;">This Month ({{ month }})</h3>
+    <p>
+      <b>Marked Days:</b> {{ month_marked }} <br>
+      <b>Present:</b> {{ month_present }} <br>
+      <b>Absent:</b> {{ month_absent }} <br>
+      <b>Percent:</b> {{ month_percent }}%
+    </p>
+    <div style="width:100%; background:#eee; border-radius:8px; height:18px; overflow:hidden;">
+      <div style="width:{{ month_percent }}%; background:#2196F3; height:18px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Batches assigned -->
+<div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff; margin-bottom:16px;">
+  <h3 style="margin-top:0;">Assigned Batches</h3>
+
+  {% if batches and batches|length > 0 %}
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Course</th>
+        <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Batch</th>
+        <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Timing</th>
+      </tr>
+      {% for b in batches %}
+      <tr>
+        <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ b.course_name }}</td>
+        <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ b.batch_name }}</td>
+        <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ b.timing or "-" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No batches assigned.</p>
+  {% endif %}
+</div>
+
+<!-- Recent attendance -->
+<div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff;">
+  <h3 style="margin-top:0;">Recent Attendance (Last 10)</h3>
+
+  {% if recent and recent|length > 0 %}
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Date</th>
+        <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Status</th>
+      </tr>
+      {% for r in recent %}
+      <tr>
+        <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.att_date }}</td>
+        <td style="padding:10px; border-bottom:1px solid #f3f3f3;">
+          {% if r.status == 'P' %}Present{% else %}Absent{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No attendance records yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

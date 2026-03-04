@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Students</h3>
+
+<p><a href="{{ url_for('student_add') }}">+ Add New Student</a></p>
+<a href="{{ url_for('inactive_students') }}">View Inactive Students</a>
+
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Reg No</th>
+    <th>Name</th>
+    <th>Mobile</th>
+    <th>Course</th>
+    <th>DOJ</th>
+    <th>Actions</th>
+  </tr>
+
+  {% for s in students %}
+  <tr>
+    <td>{{ s.id }}</td>
+    <td>{{ s.registration_number }}</td>
+    <td>{{ s.full_name }}</td>
+    <td>{{ s.mobile_number or "" }}</td>
+    <td>{{ s.course_name or "" }}</td>
+    <td>{{ s.date_of_joining }}</td>
+    <td>
+      <a href="{{ url_for('student_edit', student_id=s.id) }}">Edit</a>
+      |
+      <a href="{{ url_for('student_batches', student_id=s.id) }}">Batches</a>
+      |
+      <a href="{{ url_for('student_profile', student_id=s.id) }}">Profile</a> 
+      |
+      
+      <form method="post" action="{{ url_for('deactivate_student', student_id=s.id) }}" style="display:inline;">
+        <button type="submit" onclick="return confirm('Deactivate this student?')">Deactivate</button>
+      </form>
+    
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Edit Batch</h3>
+
+<form method="post">
+  <label>Batch Name</label>
+  <input name="batch_name" required value="{{ batch.batch_name }}">
+
+  <label>Course</label>
+  <select name="course_id" required>
+    {% for c in courses %}
+      <option value="{{ c.id }}" {% if c.id == batch.course_id %}selected{% endif %}>
+        {{ c.course_name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label>Timing</label>
+  <input name="timing" value="{{ batch.timing or '' }}">
+
+  <label>Start Date</label>
+  <input type="date" name="start_date" value="{{ batch.start_date or '' }}">
+
+  <label>End Date</label>
+  <input type="date" name="end_date" value="{{ batch.end_date or '' }}">
+
+  <button type="submit">Update</button>
+  <a href="{{ url_for('batches') }}">Cancel</a>
+</form>
+
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Mark Attendance</h3>
+
+<form method="get">
+  <label>Select Batch (optional)</label>
+  <select name="batch_id">
+    <option value="">All Students</option>
+    {% for b in batches %}
+      <option value="{{ b.id }}" {% if batch_id == b.id|string %}selected{% endif %}>
+        {{ b.course_name }} - {{ b.batch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label>Date</label>
+  <input type="date" name="date" value="{{ att_date }}">
+
+  <button type="submit">Load Students</button>
+</form>
+
+{# ✅ show attendance section if students list is loaded #}
+{% if students and students|length > 0 %}
+
+<form method="post" style="margin-top:10px;">
+  <input type="hidden" name="batch_id" value="{{ batch_id or '' }}">
+  <input type="hidden" name="att_date" value="{{ att_date }}">
+
+  <div style="margin:10px 0;">
+    <button type="button" onclick="selectAllPresent()">Select All Present</button>
+    <button type="button" onclick="clearAllPresent()">Clear All</button>
+  </div>
+
+  <p><b>Default is Absent.</b> Tick checkbox for Present ✅</p>
+
+  <table>
+    <tr>
+      <th>Present</th>
+      <th>Reg No</th>
+      <th>Student Name</th>
+    </tr>
+
+    {% for s in students %}
+      {% set st = existing.get(s.id, 'A') %}
+      <tr>
+        <td>
+          <input type="checkbox" name="present_ids" value="{{ s.id }}"
+                 {% if st == 'P' %}checked{% endif %}>
+        </td>
+        <td>{{ s.registration_number }}</td>
+        <td>{{ s.full_name }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <button type="submit" style="margin-top:10px;">Save Attendance</button>
+
+  <button type="submit" name="go_report" value="1" style="margin-top:10px;">
+    Save & Open Daily Report
+  </button>
+</form>
+
+{% else %}
+  <p style="margin-top:10px;">Select a date and click <b>Load Students</b>.</p>
+{% endif %}
+
+{% endblock %}

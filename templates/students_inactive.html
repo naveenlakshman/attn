@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Inactive Students</h2>
+
+<p>
+  <a href="{{ url_for('students') }}">← Back to Active Students</a>
+</p>
+
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Reg No</th>
+    <th>Name</th>
+    <th>Mobile</th>
+    <th>DOJ</th>
+    <th>Actions</th>
+  </tr>
+
+  {% for s in students %}
+  <tr>
+    <td>{{ s.id }}</td>
+    <td>{{ s.registration_number }}</td>
+    <td>{{ s.full_name }}</td>
+    <td>{{ s.mobile_number }}</td>
+    <td>{{ s.date_of_joining }}</td>
+    <td>
+      <form method="post" action="{{ url_for('reactivate_student', student_id=s.id) }}" style="display:inline;">
+        <button type="submit" onclick="return confirm('Reactivate this student?')">Reactivate</button>
+      </form>
+
+      <a href="{{ url_for('student_profile', student_id=s.id) }}">Profile</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if not students or students|length == 0 %}
+  <p>No inactive students found.</p>
+{% endif %}
+
+{% endblock %}

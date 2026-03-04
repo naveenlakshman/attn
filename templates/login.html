@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:520px; margin:30px auto;">
+  <div style="padding:22px; border:1px solid #ddd; border-radius:12px; background:#fff;">
+
+    <h2 style="margin:0 0 6px 0;">Login</h2>
+    <p style="margin:0 0 18px 0; color:#666;">
+      Please login to continue.
+    </p>
+
+    <form method="post" autocomplete="off">
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Username</label>
+        <input
+          type="text"
+          name="username"
+          placeholder="Enter username"
+          required
+          autofocus
+          autocomplete="username"
+          style="width:100%; padding:10px 12px; border:1px solid #ccc; border-radius:8px;"
+        >
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Password</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input
+            id="password"
+            type="password"
+            name="password"
+            placeholder="Enter password"
+            required
+            autocomplete="current-password"
+            style="flex:1; padding:10px 12px; border:1px solid #ccc; border-radius:8px;"
+          >
+          <button
+            type="button"
+            onclick="togglePassword(event)"
+            style="padding:10px 12px; border:1px solid #ccc; border-radius:8px; background:#f5f5f5; cursor:pointer;"
+          >
+            Show
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:8px; margin:12px 0 16px 0;">
+        <input type="checkbox" id="remember" disabled>
+        <label for="remember" style="color:#777;">Remember me (coming soon)</label>
+      </div>
+
+      <button
+        type="submit"
+        style="width:100%; padding:12px; border:0; border-radius:10px; background:#2d6cdf; color:#fff; font-weight:700; cursor:pointer;"
+      >
+        Login
+      </button>
+
+      <p style="margin-top:14px; font-size:12px; color:#777;">
+        Tip: Use credentials provided by Global IT Education Admin.
+      </p>
+    </form>
+
+  </div>
+</div>
+
+<script>
+function togglePassword(e) {
+  const input = document.getElementById("password");
+  const btn = e.target;
+  if (input.type === "password") {
+    input.type = "text";
+    btn.innerText = "Hide";
+  } else {
+    input.type = "password";
+    btn.innerText = "Show";
+  }
+}
+</script>
+
+{% endblock %}

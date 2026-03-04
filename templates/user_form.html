@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>{{ "Edit User" if user else "Add User" }}</h3>
+
+<form method="post">
+  <label>Full Name</label>
+  <input name="full_name" required value="{{ user.full_name if user else '' }}">
+
+  <label>Username</label>
+  <input name="username" required value="{{ user.username if user else '' }}" {% if user %}readonly{% endif %}>
+
+  <label>Role</label>
+  <select name="role" required>
+    <option value="staff" {% if user and user.role=='staff' %}selected{% endif %}>staff</option>
+    <option value="admin" {% if user and user.role=='admin' %}selected{% endif %}>admin</option>
+  </select>
+
+  <label>Status</label>
+  <select name="is_active" required>
+    <option value="1" {% if not user or user.is_active==1 %}selected{% endif %}>Active</option>
+    <option value="0" {% if user and user.is_active==0 %}selected{% endif %}>Inactive</option>
+  </select>
+
+  <label>Password {% if user %}(leave blank to keep same){% endif %}</label>
+  <input name="password" type="password" {% if not user %}required{% endif %}>
+
+  <button type="submit">Save</button>
+  <a href="{{ url_for('users_list') }}">Cancel</a>
+</form>
+{% endblock %}

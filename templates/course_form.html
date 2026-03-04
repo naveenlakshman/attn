@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Edit Course</h3>
+
+<form method="post">
+  <label>Course Name</label>
+  <input name="course_name" required value="{{ course.course_name }}">
+
+  <button type="submit">Update</button>
+  <a href="{{ url_for('courses') }}">Cancel</a>
+</form>
+
+{% endblock %}

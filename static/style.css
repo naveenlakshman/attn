@@ -1,0 +1,13 @@
+/* Global IT Attendance - Basic Styles */
+body { font-family: Arial, sans-serif; background:#f7f7f7; }
+.container { max-width: 1000px; margin: 20px auto; background:#fff; padding: 16px; border-radius: 8px; }
+nav a { margin-right: 10px; }
+table { width:100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align:left; }
+label { display:block; margin-top:10px; font-size: 13px; }
+input, select { width: 350px; max-width: 100%; padding: 8px; border:1px solid #ddd; border-radius: 6px; }
+button { padding: 8px 12px; border:0; border-radius: 6px; cursor:pointer; }
+.messages { margin: 10px 0; }
+.msg { padding: 8px; border-radius: 6px; margin-bottom: 6px; }
+.msg.success { background:#e7f7ea; }
+.msg.danger { background:#fde7e7; }

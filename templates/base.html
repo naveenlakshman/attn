@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Global IT Education - Attendance</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <!-- Left -->
+      <div>
+        <h2 style="margin:0;">Global IT Education</h2>
+      </div>
+
+      <!-- Center -->
+      <div style="flex:1; text-align:center;">
+        <p style="margin:0; color:gray;">Student Attendance Management System</p>
+      </div>
+
+      <!-- Right -->
+      <div style="min-width:200px; text-align:right;">
+        {% if session.get("user_id") %}
+          <span style="font-weight:600;">
+            {{ session.get("full_name") }} ({{ session.get("username", "") }})
+          </span>
+          | <a href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Nav -->
+    {% if session.get("user_id") %}
+      <nav style="margin:14px 0; padding:10px 12px; background:#f7f7f7; border:1px solid #e6e6e6; border-radius:10px;">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        | <a href="{{ url_for('students') }}">Students</a>
+        | <a href="{{ url_for('mark_attendance') }}">Mark Attendance</a>
+        | <a href="{{ url_for('report_daily') }}">Daily Report</a>
+        | <a href="{{ url_for('report_monthly') }}">Monthly Report</a>
+
+        {% if session.get("role") == "admin" %}
+          | <a href="{{ url_for('audit_log') }}">Audit Log</a>
+          | <a href="{{ url_for('users_list') }}">Users</a>
+          | <a href="{{ url_for('courses') }}">Courses</a>
+          | <a href="{{ url_for('batches') }}">Batches</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="messages" style="margin:10px 0;">
+          {% for cat, msg in messages %}
+            <div class="msg {{cat}}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <div style="margin-top:30px; border-top:1px solid #ddd; padding-top:10px;">
+      <p style="text-align:center; color:gray; font-size:12px; margin:0;">
+        Global IT Education ERP © 2026
+      </p>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

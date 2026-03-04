@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>{{ "Edit Student" if student else "Add Student" }}</h3>
+
+<form method="post">
+  <label>Full Name *</label>
+  <input name="full_name" required value="{{ student.full_name if student else '' }}">
+
+  <label>Mobile Number</label>
+  <input name="mobile_number" value="{{ student.mobile_number if student else '' }}">
+
+  <label>Registration Number *</label>
+  <input name="registration_number" required value="{{ student.registration_number if student else '' }}"
+         {% if student %}readonly{% endif %}>
+
+  <label>Course</label>
+  <select name="course_id">
+    <option value="">Select Course</option>
+    {% for c in courses %}
+      <option value="{{ c.id }}"
+        {% if student and student.course_id == c.id %}selected{% endif %}>
+        {{ c.course_name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label>Address</label>
+  <input name="address" value="{{ student.address if student else '' }}">
+
+  <label>Qualification</label>
+  <input name="qualification" value="{{ student.qualification if student else '' }}">
+
+  <label>Date of Joining *</label>
+  <input type="date" name="date_of_joining" required value="{{ student.date_of_joining if student else '' }}">
+
+  <button type="submit">Save</button>
+  <a href="{{ url_for('students') }}">Cancel</a>
+</form>
+
+<p style="margin-top:10px;">
+  After saving student, use <b>Batches</b> option to assign multiple batches (optional).
+</p>
+
+{% endblock %}

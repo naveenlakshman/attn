@@ -13,6 +13,22 @@
 
 <a href="{{ url_for('inactive_students') }}">View Inactive Students</a>
 
+<!-- Branch Filter -->
+<div style="margin: 15px 0; padding: 10px; background-color: #f5f5f5; border-radius: 4px;">
+  <label for="branch-filter"><b>Filter by Branch:</b></label>
+  <select id="branch-filter" style="padding: 5px; border-radius: 3px;">
+    <option value="">-- All Branches --</option>
+    {% for branch in branches %}
+    <option value="{{ branch.id }}" {% if selected_branch|string == branch.id|string %}selected{% endif %}>
+      {{ branch.branch_name }}
+    </option>
+    {% endfor %}
+  </select>
+  {% if selected_branch %}
+  <a href="{{ url_for('students') }}" style="margin-left: 10px;">Clear Filter</a>
+  {% endif %}
+</div>
+
 <table>
   <tr>
     <th>ID</th>
@@ -50,5 +66,16 @@
   </tr>
   {% endfor %}
 </table>
+
+<script>
+  document.getElementById('branch-filter').addEventListener('change', function() {
+    const branchId = this.value;
+    if (branchId) {
+      window.location.href = `{{ url_for('students') }}?branch_id=${branchId}`;
+    } else {
+      window.location.href = `{{ url_for('students') }}`;
+    }
+  });
+</script>
 
 {% endblock %}

@@ -682,19 +682,41 @@ def branch_delete(branch_id):
 def students():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT s.*, c.course_name, b.branch_name
-        FROM students s
-        LEFT JOIN courses c ON c.id = s.course_id
-        LEFT JOIN branches b ON b.id = s.branch_id
-        WHERE s.is_active=1
-        ORDER BY s.id DESC
-        """
-    )
+    
+    # Get filter parameter
+    branch_id = request.args.get("branch_id", "")
+    
+    # Get all branches for the filter dropdown
+    cur.execute("SELECT id, branch_name FROM branches ORDER BY branch_name")
+    branches = cur.fetchall()
+    
+    # Get students, optionally filtered by branch
+    if branch_id:
+        cur.execute(
+            """
+            SELECT s.*, c.course_name, b.branch_name
+            FROM students s
+            LEFT JOIN courses c ON c.id = s.course_id
+            LEFT JOIN branches b ON b.id = s.branch_id
+            WHERE s.is_active=1 AND s.branch_id=?
+            ORDER BY s.id DESC
+            """,
+            (branch_id,)
+        )
+    else:
+        cur.execute(
+            """
+            SELECT s.*, c.course_name, b.branch_name
+            FROM students s
+            LEFT JOIN courses c ON c.id = s.course_id
+            LEFT JOIN branches b ON b.id = s.branch_id
+            WHERE s.is_active=1
+            ORDER BY s.id DESC
+            """
+        )
     students_rows = cur.fetchall()
     conn.close()
-    return render_template("students.html", students=students_rows)
+    return render_template("students.html", students=students_rows, branches=branches, selected_branch=branch_id)
 
 
 @app.route("/students/add", methods=["GET", "POST"])

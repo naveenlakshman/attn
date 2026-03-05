@@ -3,6 +3,10 @@
 
 <h3>Mark Attendance</h3>
 
+<p style="padding:10px; border-radius:8px; background:#e3f2fd; border:1px solid #90caf9;">
+  💡 <b>Filter:</b> Select a <b>Batch</b> to mark attendance for that batch, OR select a <b>Branch</b> to mark attendance for all students in that branch. Leave both empty to mark all students.
+</p>
+
 <form method="get">
   <label>Select Batch (optional)</label>
   <select name="batch_id">
@@ -10,6 +14,16 @@
     {% for b in batches %}
       <option value="{{ b.id }}" {% if batch_id == b.id|string %}selected{% endif %}>
         {{ b.course_name }} - {{ b.batch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <label>Select Branch (optional)</label>
+  <select name="branch_id">
+    <option value="">All Branches</option>
+    {% for br in branches %}
+      <option value="{{ br.id }}" {% if branch_id == br.id|string %}selected{% endif %}>
+        {{ br.branch_name }}
       </option>
     {% endfor %}
   </select>
@@ -25,6 +39,7 @@
 
 <form method="post" style="margin-top:10px;">
   <input type="hidden" name="batch_id" value="{{ batch_id or '' }}">
+  <input type="hidden" name="branch_id" value="{{ branch_id or '' }}">
   <input type="hidden" name="att_date" value="{{ att_date }}">
 
   <div style="margin:10px 0;">

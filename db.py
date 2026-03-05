@@ -37,6 +37,17 @@ def init_db():
         )
     """)
 
+    # ---------- BRANCHES ----------
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS branches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            branch_name TEXT NOT NULL UNIQUE,
+            location TEXT,
+            contact_number TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+
     # ---------- BATCHES ----------
     cur.execute("""
         CREATE TABLE IF NOT EXISTS batches (
@@ -60,11 +71,13 @@ def init_db():
             mobile_number TEXT,
             registration_number TEXT NOT NULL UNIQUE,
             course_id INTEGER,
+            branch_id INTEGER,
             address TEXT,
             qualification TEXT,
             date_of_joining TEXT NOT NULL,
             is_active INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE SET NULL
+            FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE SET NULL,
+            FOREIGN KEY(branch_id) REFERENCES branches(id) ON DELETE SET NULL
         )
     """)
 

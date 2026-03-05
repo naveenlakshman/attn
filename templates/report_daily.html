@@ -17,6 +17,16 @@
     {% endfor %}
   </select>
 
+  <label>Branch (optional)</label>
+  <select name="branch_id">
+    <option value="">All Branches</option>
+    {% for br in branches %}
+      <option value="{{ br.id }}" {% if branch_id == br.id|string %}selected{% endif %}>
+        {{ br.branch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
   <button type="submit">View</button>
 </form>
 
@@ -29,12 +39,14 @@
   <tr>
     <th>Reg No</th>
     <th>Name</th>
+    <th>Branch</th>
     <th>Status</th>
   </tr>
   {% for r in rows %}
   <tr>
     <td>{{ r.registration_number }}</td>
     <td>{{ r.full_name }}</td>
+    <td>{{ r.branch_name or "-" }}</td>
     <td>
       {% if r.status == 'P' %}
         Present

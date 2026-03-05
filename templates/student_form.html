@@ -25,6 +25,17 @@
     {% endfor %}
   </select>
 
+  <label>Branch</label>
+  <select name="branch_id">
+    <option value="">Select Branch</option>
+    {% for b in branches %}
+      <option value="{{ b.id }}"
+        {% if student and student.branch_id == b.id %}selected{% endif %}>
+        {{ b.branch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
   <label>Address</label>
   <input name="address" value="{{ student.address if student else '' }}">
 

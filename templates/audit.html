@@ -3,60 +3,141 @@
 
 <h2>Attendance Audit Log</h2>
 
-<form method="get" style="margin: 10px 0;">
-  <label>Date</label>
-  <input type="date" name="date" value="{{ att_date }}">
+<!-- Filter Section -->
+<form method="get" style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#f9f9f9; margin-bottom:20px;">
+  <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:flex-end;">
+    
+    <div style="flex:1; min-width:180px;">
+      <label style="display:block; margin-bottom:5px; font-weight:600;">Date</label>
+      <input type="date" name="date" value="{{ att_date }}" style="width:100%;">
+    </div>
 
-  <label style="margin-left:10px;">Batch (optional)</label>
-  <select name="batch_id">
-    <option value="">All Students</option>
-    {% for b in batches %}
-      <option value="{{ b.id }}" {% if batch_id == b.id|string %}selected{% endif %}>
-        {{ b.course_name }} - {{ b.batch_name }}
-      </option>
-    {% endfor %}
-  </select>
+    <div style="flex:1; min-width:200px;">
+      <label style="display:block; margin-bottom:5px; font-weight:600;">Batch (optional)</label>
+      <select name="batch_id" style="width:100%;">
+        <option value="">All Batches</option>
+        {% for b in batches %}
+          <option value="{{ b.id }}" {% if batch_id == b.id|string %}selected{% endif %}>
+            {{ b.course_name }} - {{ b.batch_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <button type="submit">View</button>
+    <div style="flex:1; min-width:200px;">
+      <label style="display:block; margin-bottom:5px; font-weight:600;">Branch (optional)</label>
+      <select name="branch_id" style="width:100%;">
+        <option value="">All Branches</option>
+        {% for br in branches %}
+          <option value="{{ br.id }}" {% if branch_id == br.id|string %}selected{% endif %}>
+            {{ br.branch_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex:1; min-width:200px;">
+      <label style="display:block; margin-bottom:5px; font-weight:600;">Marked By (optional)</label>
+      <select name="user_id" style="width:100%;">
+        <option value="">All Users</option>
+        {% for u in users %}
+          <option value="{{ u.id }}" {% if user_id == u.id|string %}selected{% endif %}>
+            {{ u.full_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" style="padding:8px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;">Filter</button>
+  </div>
 </form>
 
+<!-- Summary Statistics Card -->
+<div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff; margin-bottom:20px;">
+  <h3 style="margin-top:0; margin-bottom:16px;">📊 Summary for {{ att_date }}</h3>
+  
+  <div style="display:flex; flex-wrap:wrap; gap:12px;">
+    <div style="flex:1; min-width:200px; padding:12px; border:1px solid #e0e0e0; border-radius:8px; background:#e3f2fd;">
+      <div style="font-size:12px; color:#555;">Total Marked</div>
+      <div style="font-size:24px; font-weight:bold; color:#1976d2;">{{ total_marked }}</div>
+    </div>
+    
+    <div style="flex:1; min-width:200px; padding:12px; border:1px solid #e0e0e0; border-radius:8px; background:#e8f5e9;">
+      <div style="font-size:12px; color:#555;">Present</div>
+      <div style="font-size:24px; font-weight:bold; color:#2e7d32;">{{ total_present }}</div>
+    </div>
+    
+    <div style="flex:1; min-width:200px; padding:12px; border:1px solid #e0e0e0; border-radius:8px; background:#ffebee;">
+      <div style="font-size:12px; color:#555;">Absent</div>
+      <div style="font-size:24px; font-weight:bold; color:#c62828;">{{ total_absent }}</div>
+    </div>
+    
+    <div style="flex:1; min-width:200px; padding:12px; border:1px solid #e0e0e0; border-radius:8px; background:#fff3e0;">
+      <div style="font-size:12px; color:#555;">Attendance %</div>
+      <div style="font-size:24px; font-weight:bold; color:#f57c00;">{{ overall_percent }}%</div>
+      <div style="width:100%; background:#eee; border-radius:4px; height:8px; margin-top:8px; overflow:hidden;">
+        <div style="width:{{ overall_percent }}%; background:#f57c00; height:8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Details Table -->
 <div style="padding:16px; border:1px solid #ddd; border-radius:10px; background:#fff;">
-  <table style="width:100%; border-collapse:collapse;">
-    <tr>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Date</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Course</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Batch</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Marked</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Present</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Absent</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Marked By</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Last Updated</th>
-      <th style="text-align:left; border-bottom:1px solid #eee; padding:10px;">Open</th>
-    </tr>
+  <h3 style="margin-top:0; margin-bottom:16px;">📋 Audit Details</h3>
+  
+  {% if rows and rows|length > 0 %}
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <tr style="background:#f5f5f5;">
+          <th style="text-align:left; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Date</th>
+          <th style="text-align:left; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Course/Batch/Branch</th>
+          <th style="text-align:center; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Marked</th>
+          <th style="text-align:center; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Present</th>
+          <th style="text-align:center; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Absent</th>
+          <th style="text-align:center; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">%</th>
+          <th style="text-align:left; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Marked By</th>
+          <th style="text-align:left; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">Last Updated</th>
+          <th style="text-align:center; border-bottom:2px solid #ddd; padding:12px; font-weight:600;">View</th>
+        </tr>
 
-    {% for r in rows %}
-    <tr>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.att_date }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.course_name }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.batch_name }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.marked }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.present }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.absent }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.marked_by_name }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">{{ r.last_marked_at }}</td>
-      <td style="padding:10px; border-bottom:1px solid #f3f3f3;">
-        {% if r.batch_id %}
-          <a href="{{ url_for('report_daily', date=r.att_date, batch_id=r.batch_id) }}">Daily</a>
-        {% else %}
-          <a href="{{ url_for('report_daily', date=r.att_date) }}">Daily</a>
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
-
-  {% if not rows or rows|length == 0 %}
-    <p style="margin-top:10px;">No audit data found for this selection.</p>
+        {% for r in rows %}
+        <tr style="border-bottom:1px solid #f0f0f0; hover-background:#f9f9f9;">
+          <td style="padding:12px; text-align:left;">{{ r.att_date }}</td>
+          <td style="padding:12px; text-align:left;">
+            {% if r.course_name != '-' %}
+              <b>{{ r.course_name }}</b> / {{ r.batch_name }}
+            {% elif r.branch_name != '-' %}
+              <b>{{ r.branch_name }}</b> (Branch)
+            {% else %}
+              All Students
+            {% endif %}
+          </td>
+          <td style="padding:12px; text-align:center; font-weight:600;">{{ r.marked }}</td>
+          <td style="padding:12px; text-align:center; color:#2e7d32; font-weight:600;">{{ r.present }}</td>
+          <td style="padding:12px; text-align:center; color:#c62828; font-weight:600;">{{ r.absent }}</td>
+          <td style="padding:12px; text-align:center;">
+            <span style="padding:4px 8px; border-radius:4px; background:#fff3e0; color:#f57c00; font-weight:600;">{{ r.percent }}%</span>
+          </td>
+          <td style="padding:12px; text-align:left;">{{ r.marked_by_name }}</td>
+          <td style="padding:12px; text-align:left; font-size:12px; color:#666;">{{ r.last_marked_at }}</td>
+          <td style="padding:12px; text-align:center;">
+            {% if r.batch_id %}
+              <a href="{{ url_for('report_daily', date=r.att_date, batch_id=r.batch_id) }}" style="text-decoration:none; color:#007bff;">📄</a>
+            {% elif r.branch_id %}
+              <a href="{{ url_for('report_daily', date=r.att_date, branch_id=r.branch_id) }}" style="text-decoration:none; color:#007bff;">📄</a>
+            {% else %}
+              <a href="{{ url_for('report_daily', date=r.att_date) }}" style="text-decoration:none; color:#007bff;">📄</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% else %}
+    <p style="padding:16px; background:#f5f5f5; border-radius:8px; color:#666; text-align:center;">
+      ℹ️ No attendance records found for the selected date and filters.
+    </p>
   {% endif %}
 </div>
 

@@ -6,6 +6,17 @@
 <form method="get">
   <label>Month</label>
   <input type="month" name="month" value="{{ month }}">
+
+  <label>Branch (optional)</label>
+  <select name="branch_id">
+    <option value="">All Branches</option>
+    {% for br in branches %}
+      <option value="{{ br.id }}" {% if branch_id == br.id|string %}selected{% endif %}>
+        {{ br.branch_name }}
+      </option>
+    {% endfor %}
+  </select>
+
   <button type="submit">View</button>
 </form>
 
@@ -13,6 +24,7 @@
   <tr>
     <th>Reg No</th>
     <th>Name</th>
+    <th>Branch</th>
     <th>Present Days</th>
     <th>Absent Days</th>
     <th>Marked Days</th>
@@ -22,6 +34,7 @@
   <tr>
     <td>{{ r.registration_number }}</td>
     <td>{{ r.full_name }}</td>
+    <td>{{ r.branch_name or "-" }}</td>
     <td>{{ r.present_days or 0 }}</td>
     <td>{{ r.absent_days or 0 }}</td>
     <td>{{ r.marked_days or 0 }}</td>

@@ -118,6 +118,43 @@ def dashboard():
             "percentage": bperc
         })
 
+    # Branch-wise summary for today
+    cur.execute("""
+        SELECT
+          br.id AS branch_id,
+          br.branch_name,
+          COUNT(DISTINCT s.id) AS branch_students,
+          SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present,
+          SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent
+        FROM branches br
+        LEFT JOIN students s ON s.branch_id=br.id AND s.is_active=1
+        LEFT JOIN attendance a
+          ON a.student_id = s.id AND a.att_date=?
+        WHERE br.is_active=1
+        GROUP BY br.id
+        ORDER BY br.branch_name
+    """, (today,))
+    branch_rows = cur.fetchall()
+
+    # Add branch % in python
+    branch_summaries = []
+    for r in branch_rows:
+        brs = r["branch_students"] or 0
+        brp = r["present"] or 0
+        bra = r["absent"] or 0
+        brmarked = brp + bra
+        brnot = max(brs - brmarked, 0)
+        brperc = round((brp / brs) * 100, 1) if brs > 0 else 0
+        branch_summaries.append({
+            "branch_id": r["branch_id"],
+            "branch_name": r["branch_name"],
+            "branch_students": brs,
+            "present": brp,
+            "absent": bra,
+            "not_marked": brnot,
+            "percentage": brperc
+        })
+
         # -----------------------------
     # Students below 75% (overall)
     # -----------------------------
@@ -162,6 +199,7 @@ def dashboard():
         not_marked=not_marked,
         percentage=percentage,
         batches=batches,
+        branch_summaries=branch_summaries,
         low_attendance_students=low_attendance_students
     )
 
@@ -473,6 +511,107 @@ def batch_delete(batch_id):
     flash("Batch deleted.", "success")
     return redirect(url_for("batches"))
 
+# -------- BRANCHES (Admin) --------
+
+@app.route("/branches")
+@admin_required
+def branches():
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM branches WHERE is_active=1 ORDER BY id DESC")
+    branches = cur.fetchall()
+    conn.close()
+    return render_template("branches.html", branches=branches)
+
+@app.route("/branches/add", methods=["POST"])
+@admin_required
+def branch_add():
+    branch_name = request.form.get("branch_name", "").strip()
+    location = request.form.get("location", "").strip()
+    contact_number = request.form.get("contact_number", "").strip()
+
+    if not branch_name:
+        flash("Branch name required", "danger")
+        return redirect(url_for("branches"))
+
+    conn = get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO branches (branch_name, location, contact_number)
+            VALUES (?, ?, ?)
+        """, (branch_name, location, contact_number))
+        conn.commit()
+        flash("Branch added successfully", "success")
+    except Exception:
+        flash("Branch already exists", "danger")
+    finally:
+        conn.close()
+
+    return redirect(url_for("branches"))
+
+@app.route("/branches/<int:branch_id>/edit", methods=["GET", "POST"])
+@admin_required
+def branch_edit(branch_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM branches WHERE id=?", (branch_id,))
+    branch = cur.fetchone()
+
+    if not branch:
+        conn.close()
+        flash("Branch not found", "danger")
+        return redirect(url_for("branches"))
+
+    if request.method == "POST":
+        branch_name = request.form.get("branch_name", "").strip()
+        location = request.form.get("location", "").strip()
+        contact_number = request.form.get("contact_number", "").strip()
+
+        if not branch_name:
+            flash("Branch name required", "danger")
+            return redirect(url_for("branch_edit", branch_id=branch_id))
+
+        try:
+            cur.execute("""
+                UPDATE branches
+                SET branch_name=?, location=?, contact_number=?
+                WHERE id=?
+            """, (branch_name, location, contact_number, branch_id))
+            conn.commit()
+            flash("Branch updated successfully", "success")
+        except Exception:
+            flash("Branch name already exists", "danger")
+        finally:
+            conn.close()
+
+        return redirect(url_for("branches"))
+
+    conn.close()
+    return render_template("branch_form.html", branch=branch)
+
+@app.route("/branches/<int:branch_id>/delete", methods=["POST"])
+@admin_required
+def branch_delete(branch_id):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Safety: if students exist with this branch, block delete
+    cur.execute("SELECT COUNT(*) AS cnt FROM students WHERE branch_id=?", (branch_id,))
+    cnt = cur.fetchone()["cnt"]
+
+    if cnt > 0:
+        conn.close()
+        flash("Cannot delete: Students are assigned to this branch. Delete or reassign students first.", "danger")
+        return redirect(url_for("branches"))
+
+    cur.execute("DELETE FROM branches WHERE id=?", (branch_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Branch deleted.", "success")
+    return redirect(url_for("branches"))
+
 # -------- STUDENTS (Admin) --------
 
 @app.route("/students")
@@ -481,9 +620,10 @@ def students():
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
-        SELECT s.*, c.course_name
+        SELECT s.*, c.course_name, b.branch_name
         FROM students s
         LEFT JOIN courses c ON c.id = s.course_id
+        LEFT JOIN branches b ON b.id = s.branch_id
         WHERE s.is_active=1
         ORDER BY s.id DESC
     """)
@@ -498,12 +638,15 @@ def student_add():
     cur = conn.cursor()
     cur.execute("SELECT id, course_name FROM courses WHERE is_active=1 ORDER BY course_name")
     courses = cur.fetchall()
+    cur.execute("SELECT id, branch_name FROM branches WHERE is_active=1 ORDER BY branch_name")
+    branches = cur.fetchall()
 
     if request.method == "POST":
         full_name = request.form.get("full_name", "").strip()
         mobile_number = request.form.get("mobile_number", "").strip()
         registration_number = request.form.get("registration_number", "").strip()
         course_id = request.form.get("course_id", "").strip()
+        branch_id = request.form.get("branch_id", "").strip()
         address = request.form.get("address", "").strip()
         qualification = request.form.get("qualification", "").strip()
         date_of_joining = request.form.get("date_of_joining", "").strip()
@@ -516,13 +659,14 @@ def student_add():
         try:
             cur.execute("""
                 INSERT INTO students
-                (full_name, mobile_number, registration_number, course_id, address, qualification, date_of_joining)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (full_name, mobile_number, registration_number, course_id, branch_id, address, qualification, date_of_joining)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 full_name,
                 mobile_number,
                 registration_number,
                 int(course_id) if course_id else None,
+                int(branch_id) if branch_id else None,
                 address,
                 qualification,
                 date_of_joining
@@ -537,7 +681,7 @@ def student_add():
             return redirect(url_for("student_add"))
 
     conn.close()
-    return render_template("student_form.html", student=None, courses=courses)
+    return render_template("student_form.html", student=None, courses=courses, branches=branches)
 
 @app.route("/students/<int:student_id>/edit", methods=["GET", "POST"])
 @admin_required
@@ -547,6 +691,8 @@ def student_edit(student_id):
 
     cur.execute("SELECT id, course_name FROM courses WHERE is_active=1 ORDER BY course_name")
     courses = cur.fetchall()
+    cur.execute("SELECT id, branch_name FROM branches WHERE is_active=1 ORDER BY branch_name")
+    branches = cur.fetchall()
 
     cur.execute("SELECT * FROM students WHERE id=?", (student_id,))
     student = cur.fetchone()
@@ -560,6 +706,7 @@ def student_edit(student_id):
         full_name = request.form.get("full_name", "").strip()
         mobile_number = request.form.get("mobile_number", "").strip()
         course_id = request.form.get("course_id", "").strip()
+        branch_id = request.form.get("branch_id", "").strip()
         address = request.form.get("address", "").strip()
         qualification = request.form.get("qualification", "").strip()
         date_of_joining = request.form.get("date_of_joining", "").strip()
@@ -571,12 +718,13 @@ def student_edit(student_id):
 
         cur.execute("""
             UPDATE students
-            SET full_name=?, mobile_number=?, course_id=?, address=?, qualification=?, date_of_joining=?
+            SET full_name=?, mobile_number=?, course_id=?, branch_id=?, address=?, qualification=?, date_of_joining=?
             WHERE id=?
         """, (
             full_name,
             mobile_number,
             int(course_id) if course_id else None,
+            int(branch_id) if branch_id else None,
             address,
             qualification,
             date_of_joining,
@@ -588,7 +736,7 @@ def student_edit(student_id):
         return redirect(url_for("students"))
 
     conn.close()
-    return render_template("student_form.html", student=student, courses=courses)
+    return render_template("student_form.html", student=student, courses=courses, branches=branches)
 
 @app.route("/students/inactive")
 @login_required
@@ -655,8 +803,10 @@ def student_profile(student_id):
     cur.execute("""
         SELECT s.*
              , c.course_name
+             , b.branch_name
         FROM students s
         LEFT JOIN courses c ON c.id = s.course_id
+        LEFT JOIN branches b ON b.id = s.branch_id
         WHERE s.id=?
     """, (student_id,))
     student = cur.fetchone()
@@ -798,6 +948,7 @@ from datetime import date
 def mark_attendance():
 
     batch_id = request.args.get("batch_id")
+    branch_id = request.args.get("branch_id")
     att_date = request.args.get("date") or str(date.today())
 
     conn = get_conn()
@@ -812,6 +963,15 @@ def mark_attendance():
         ORDER BY c.course_name, b.batch_name
     """)
     batches = cur.fetchall()
+
+    # Load branches for dropdown
+    cur.execute("""
+        SELECT id, branch_name
+        FROM branches
+        WHERE is_active=1
+        ORDER BY branch_name
+    """)
+    branches = cur.fetchall()
 
     students = []
     existing = {}
@@ -829,6 +989,17 @@ def mark_attendance():
             WHERE sb.batch_id=? AND s.is_active=1
             ORDER BY s.full_name
         """, (batch_id,))
+        students = cur.fetchall()
+
+    elif branch_id:
+
+        # Students from selected branch
+        cur.execute("""
+            SELECT id, full_name, registration_number
+            FROM students
+            WHERE branch_id=? AND is_active=1
+            ORDER BY full_name
+        """, (branch_id,))
         students = cur.fetchall()
 
     else:
@@ -858,6 +1029,7 @@ def mark_attendance():
     if request.method == "POST":
 
         batch_id = request.form.get("batch_id")
+        branch_id = request.form.get("branch_id")
         att_date = request.form.get("att_date")
         present_ids = set(request.form.getlist("present_ids"))
         marked_by = session.get("user_id")
@@ -871,6 +1043,16 @@ def mark_attendance():
                 JOIN student_batches sb ON sb.student_id=s.id
                 WHERE sb.batch_id=? AND s.is_active=1
             """, (batch_id,))
+            batch_students = cur.fetchall()
+
+        elif branch_id:
+
+            # branch students
+            cur.execute("""
+                SELECT id
+                FROM students
+                WHERE branch_id=? AND is_active=1
+            """, (branch_id,))
             batch_students = cur.fetchall()
 
         else:
@@ -905,9 +1087,19 @@ def mark_attendance():
 
         # Open report
         if request.form.get("go_report") == "1":
-            return redirect(url_for("report_daily", date=att_date, batch_id=batch_id))
+            if batch_id:
+                return redirect(url_for("report_daily", date=att_date, batch_id=batch_id))
+            elif branch_id:
+                return redirect(url_for("report_daily", date=att_date, branch_id=branch_id))
+            else:
+                return redirect(url_for("report_daily", date=att_date))
 
-        return redirect(url_for("mark_attendance", batch_id=batch_id, date=att_date))
+        if batch_id:
+            return redirect(url_for("mark_attendance", batch_id=batch_id, date=att_date))
+        elif branch_id:
+            return redirect(url_for("mark_attendance", branch_id=branch_id, date=att_date))
+        else:
+            return redirect(url_for("mark_attendance", date=att_date))
 
     conn.close()
 
@@ -915,6 +1107,8 @@ def mark_attendance():
         "mark_attendance.html",
         batches=batches,
         batch_id=batch_id,
+        branches=branches,
+        branch_id=branch_id,
         students=students,
         att_date=att_date,
         existing=existing
@@ -925,6 +1119,8 @@ def mark_attendance():
 def audit_log():
     att_date = request.args.get("date") or str(date.today())
     batch_id = request.args.get("batch_id") or ""
+    branch_id = request.args.get("branch_id") or ""
+    user_id = request.args.get("user_id") or ""
 
     conn = get_conn()
     cur = conn.cursor()
@@ -939,8 +1135,40 @@ def audit_log():
     """)
     batches = cur.fetchall()
 
-    # Audit rows
-    # If batch selected, only students from that batch are considered.
+    # Load branches for filter dropdown
+    cur.execute("""
+        SELECT id, branch_name
+        FROM branches
+        WHERE is_active=1
+        ORDER BY branch_name
+    """)
+    branches = cur.fetchall()
+
+    # Load users for filter dropdown
+    cur.execute("""
+        SELECT id, full_name
+        FROM users
+        WHERE is_active=1
+        ORDER BY full_name
+    """)
+    users = cur.fetchall()
+
+    # Calculate overall statistics for the date
+    cur.execute("""
+        SELECT
+            COUNT(DISTINCT student_id) AS total_marked,
+            SUM(CASE WHEN status='P' THEN 1 ELSE 0 END) AS total_present,
+            SUM(CASE WHEN status='A' THEN 1 ELSE 0 END) AS total_absent
+        FROM attendance
+        WHERE att_date=?
+    """, (att_date,))
+    stats_row = cur.fetchone()
+    total_marked = stats_row["total_marked"] or 0
+    total_present = stats_row["total_present"] or 0
+    total_absent = stats_row["total_absent"] or 0
+    overall_percent = round((total_present / total_marked) * 100, 1) if total_marked > 0 else 0
+
+    # Audit rows with multiple filter options
     if batch_id:
         cur.execute("""
             SELECT
@@ -948,10 +1176,11 @@ def audit_log():
                 b.id AS batch_id,
                 c.course_name,
                 b.batch_name,
+                u.id AS user_id,
+                u.full_name AS marked_by_name,
                 COUNT(a.student_id) AS marked,
                 SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present,
                 SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent,
-                u.full_name AS marked_by_name,
                 MAX(a.marked_at) AS last_marked_at
             FROM attendance a
             JOIN student_batches sb ON sb.student_id = a.student_id
@@ -963,18 +1192,60 @@ def audit_log():
             ORDER BY last_marked_at DESC
         """, (att_date, att_date, batch_id))
         rows = cur.fetchall()
+    elif branch_id:
+        cur.execute("""
+            SELECT
+                ? AS att_date,
+                br.id AS branch_id,
+                br.branch_name,
+                '-' AS course_name,
+                '-' AS batch_name,
+                u.id AS user_id,
+                u.full_name AS marked_by_name,
+                COUNT(a.student_id) AS marked,
+                SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present,
+                SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent,
+                MAX(a.marked_at) AS last_marked_at
+            FROM attendance a
+            JOIN students s ON s.id = a.student_id
+            JOIN branches br ON br.id = s.branch_id
+            LEFT JOIN users u ON u.id = a.marked_by
+            WHERE a.att_date=? AND s.branch_id=?
+            GROUP BY br.id, a.marked_by
+            ORDER BY last_marked_at DESC
+        """, (att_date, att_date, branch_id))
+        rows = cur.fetchall()
+    elif user_id:
+        cur.execute("""
+            SELECT
+                ? AS att_date,
+                u.id AS user_id,
+                u.full_name AS marked_by_name,
+                '-' AS course_name,
+                '-' AS batch_name,
+                COUNT(a.student_id) AS marked,
+                SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present,
+                SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent,
+                MAX(a.marked_at) AS last_marked_at
+            FROM attendance a
+            LEFT JOIN users u ON u.id = a.marked_by
+            WHERE a.att_date=? AND a.marked_by=?
+            GROUP BY a.marked_by
+            ORDER BY last_marked_at DESC
+        """, (att_date, att_date, user_id))
+        rows = cur.fetchall()
     else:
         # Overall audit (all students marked on that date) grouped by user
         cur.execute("""
             SELECT
                 ? AS att_date,
-                NULL AS batch_id,
+                u.id AS user_id,
+                u.full_name AS marked_by_name,
                 '-' AS course_name,
                 'All Students' AS batch_name,
                 COUNT(a.student_id) AS marked,
                 SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present,
                 SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent,
-                u.full_name AS marked_by_name,
                 MAX(a.marked_at) AS last_marked_at
             FROM attendance a
             LEFT JOIN users u ON u.id = a.marked_by
@@ -986,27 +1257,45 @@ def audit_log():
 
     conn.close()
 
-    # Fix None values
+    # Fix None values and calculate percentages
     final_rows = []
     for r in rows:
-        final_rows.append({
-            "att_date": r["att_date"],
-            "batch_id": r["batch_id"],
-            "course_name": r["course_name"],
-            "batch_name": r["batch_name"],
-            "marked": r["marked"] or 0,
-            "present": r["present"] or 0,
-            "absent": r["absent"] or 0,
-            "marked_by_name": r["marked_by_name"] or "-",
-            "last_marked_at": r["last_marked_at"] or "-"
-        })
+        r = dict(r)  # ✅ convert sqlite3.Row to dict so .get() works
 
+        marked = r.get("marked") or 0
+        present = r.get("present") or 0
+        absent = r.get("absent") or 0
+        percent = round((present / marked) * 100, 1) if marked > 0 else 0
+
+        final_rows.append({
+            "att_date": r.get("att_date"),
+            "batch_id": r.get("batch_id"),
+            "branch_id": r.get("branch_id"),
+            "course_name": r.get("course_name") or "-",
+            "batch_name": r.get("batch_name") or "-",
+            "branch_name": r.get("branch_name") or "-",
+            "marked": marked,
+            "present": present,
+            "absent": absent,
+            "percent": percent,
+            "marked_by_name": r.get("marked_by_name") or "-",
+            "user_id": r.get("user_id"),
+            "last_marked_at": r.get("last_marked_at") or "-"
+    })
     return render_template(
         "audit.html",
         att_date=att_date,
         batches=batches,
         batch_id=batch_id,
-        rows=final_rows
+        branches=branches,
+        branch_id=branch_id,
+        users=users,
+        user_id=user_id,
+        rows=final_rows,
+        total_marked=total_marked,
+        total_present=total_present,
+        total_absent=total_absent,
+        overall_percent=overall_percent
     )
 
 # -------- DAILY REPORT --------
@@ -1016,6 +1305,7 @@ def audit_log():
 def report_daily():
     att_date = request.args.get("date") or str(date.today())
     batch_id = request.args.get("batch_id")
+    branch_id = request.args.get("branch_id")
 
     conn = get_conn()
     cur = conn.cursor()
@@ -1030,24 +1320,46 @@ def report_daily():
     """)
     batches = cur.fetchall()
 
+    # Load branches for dropdown
+    cur.execute("""
+        SELECT id, branch_name
+        FROM branches
+        WHERE is_active=1
+        ORDER BY branch_name
+    """)
+    branches = cur.fetchall()
+
     if batch_id:
         cur.execute("""
-            SELECT s.registration_number, s.full_name,
+            SELECT s.registration_number, s.full_name, s.branch_id, br.branch_name,
                    COALESCE(a.status,'A') AS status
             FROM students s
             JOIN student_batches sb ON sb.student_id=s.id
             LEFT JOIN attendance a
               ON a.student_id = s.id AND a.att_date = ?
+            LEFT JOIN branches br ON br.id = s.branch_id
             WHERE sb.batch_id=? AND s.is_active=1
             ORDER BY s.full_name
         """, (att_date, batch_id))
-    else:
+    elif branch_id:
         cur.execute("""
-            SELECT s.registration_number, s.full_name,
+            SELECT s.registration_number, s.full_name, s.branch_id, br.branch_name,
                    COALESCE(a.status,'A') AS status
             FROM students s
             LEFT JOIN attendance a
               ON a.student_id = s.id AND a.att_date = ?
+            LEFT JOIN branches br ON br.id = s.branch_id
+            WHERE s.branch_id=? AND s.is_active=1
+            ORDER BY s.full_name
+        """, (att_date, branch_id))
+    else:
+        cur.execute("""
+            SELECT s.registration_number, s.full_name, s.branch_id, br.branch_name,
+                   COALESCE(a.status,'A') AS status
+            FROM students s
+            LEFT JOIN attendance a
+              ON a.student_id = s.id AND a.att_date = ?
+            LEFT JOIN branches br ON br.id = s.branch_id
             WHERE s.is_active=1
             ORDER BY s.full_name
         """, (att_date,))
@@ -1060,7 +1372,8 @@ def report_daily():
     return render_template("report_daily.html",
                            rows=rows, att_date=att_date,
                            present=present, absent=absent,
-                           batches=batches, batch_id=batch_id)
+                           batches=batches, batch_id=batch_id,
+                           branches=branches, branch_id=branch_id)
 
 # -------- MONTHLY REPORT --------
 
@@ -1069,26 +1382,53 @@ def report_daily():
 def report_monthly():
     # format: YYYY-MM
     month = request.args.get("month") or str(date.today())[:7]
+    branch_id = request.args.get("branch_id")
 
     conn = get_conn()
     cur = conn.cursor()
 
+    # Load branches for dropdown
     cur.execute("""
-        SELECT s.registration_number, s.full_name,
-               SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present_days,
-               SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent_days,
-               COUNT(a.id) AS marked_days
-        FROM students s
-        LEFT JOIN attendance a
-          ON a.student_id = s.id AND substr(a.att_date, 1, 7) = ?
-        WHERE s.is_active=1
-        GROUP BY s.id
-        ORDER BY s.full_name
-    """, (month,))
+        SELECT id, branch_name
+        FROM branches
+        WHERE is_active=1
+        ORDER BY branch_name
+    """)
+    branches = cur.fetchall()
+
+    if branch_id:
+        cur.execute("""
+            SELECT s.registration_number, s.full_name, s.branch_id, br.branch_name,
+                   SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present_days,
+                   SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent_days,
+                   COUNT(a.id) AS marked_days
+            FROM students s
+            LEFT JOIN attendance a
+              ON a.student_id = s.id AND substr(a.att_date, 1, 7) = ?
+            LEFT JOIN branches br ON br.id = s.branch_id
+            WHERE s.is_active=1 AND s.branch_id=?
+            GROUP BY s.id
+            ORDER BY s.full_name
+        """, (month, branch_id))
+    else:
+        cur.execute("""
+            SELECT s.registration_number, s.full_name, s.branch_id, br.branch_name,
+                   SUM(CASE WHEN a.status='P' THEN 1 ELSE 0 END) AS present_days,
+                   SUM(CASE WHEN a.status='A' THEN 1 ELSE 0 END) AS absent_days,
+                   COUNT(a.id) AS marked_days
+            FROM students s
+            LEFT JOIN attendance a
+              ON a.student_id = s.id AND substr(a.att_date, 1, 7) = ?
+            LEFT JOIN branches br ON br.id = s.branch_id
+            WHERE s.is_active=1
+            GROUP BY s.id
+            ORDER BY s.full_name
+        """, (month,))
     rows = cur.fetchall()
 
     conn.close()
-    return render_template("report_monthly.html", rows=rows, month=month)
+    return render_template("report_monthly.html", rows=rows, month=month,
+                           branches=branches, branch_id=branch_id)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Edit Branch</h3>
+
+<form method="post">
+  <label>Branch Name</label>
+  <input name="branch_name" required value="{{ branch.branch_name }}">
+
+  <label>Location</label>
+  <input name="location" value="{{ branch.location or '' }}">
+
+  <label>Contact Number</label>
+  <input name="contact_number" value="{{ branch.contact_number or '' }}">
+
+  <button type="submit">Update</button>
+  <a href="{{ url_for('branches') }}">Cancel</a>
+</form>
+
+{% endblock %}
